@@ -1,6 +1,7 @@
 # dependencies
 
 es/
+es2020/
 lib/
 
 node_modules

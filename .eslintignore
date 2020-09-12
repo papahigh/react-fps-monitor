@@ -1,6 +1,7 @@
 build/
 lib/
 es/
+es2020/
 node_modules/
 .snapshots/
 

@@ -1,8 +1,6 @@
-import React, { useEffect, useReducer, useRef, MouseEvent, createRef, RefObject, memo } from 'react';
-import root from 'window-or-global';
-import raf from 'raf';
+import React, { useEffect, useReducer, useRef, createRef, RefObject, memo } from 'react';
 
-const COUNT = root.performance && root.performance.memory ? 3 : 2;
+const COUNT = performance && performance.memory ? 3 : 2;
 const RATIO = Math.round(window.devicePixelRatio || 1);
 const WIDTH = 80;
 const HEIGHT = 48;
@@ -20,13 +18,24 @@ export interface Props {
   right?: string | number;
   bottom?: string | number;
   left?: string | number;
+  maxFps?: number;
+  maxMs?: number;
+  maxMb?: number;
 }
 
-function Monitor({ top = 0, right = 'auto', bottom = 'auto', left = 0 }: Props) {
+function Monitor({
+  top = 0,
+  right = 'auto',
+  bottom = 'auto',
+  left = 0,
+  maxFps = 100,
+  maxMs = 200,
+  maxMb = Infinity,
+}: Props) {
   const [state, nextState] = useReducer(i => i + 1, 0);
   const nodes = useRef(createRefs(COUNT));
 
-  useEffect(() => createHandler(nodes.current).subscribe(), []);
+  useEffect(() => createHandler(nodes.current, maxFps, maxMs, maxMb).subscribe(), [maxFps, maxMs, maxMb]);
 
   const display = state % nodes.current.length;
 
@@ -52,8 +61,8 @@ function Monitor({ top = 0, right = 'auto', bottom = 'auto', left = 0 }: Props) 
         cursor: 'pointer',
         opacity: 0.9,
       }}
-      onClick={(e: MouseEvent<HTMLDivElement>) => {
-        e.preventDefault();
+      onClick={event => {
+        event.preventDefault();
         nextState();
       }}
     >
@@ -68,8 +77,8 @@ function createRefs(count: number): RefObject<HTMLCanvasElement>[] {
     .map(() => createRef<HTMLCanvasElement>());
 }
 
-function createHandler(nodes: RefObject<HTMLCanvasElement>[]) {
-  const _perf = root.performance;
+function createHandler(nodes: RefObject<HTMLCanvasElement>[], maxFps: number, maxMs: number, maxMb: number) {
+  const _perf = performance;
   const _now = _perf && _perf.now ? _perf.now.bind(_perf) : Date.now.bind(Date);
   const _styles: [name: string, fg: string, bg: string][] = [
     ['FPS', '#0ff', '#002'],
@@ -88,24 +97,27 @@ function createHandler(nodes: RefObject<HTMLCanvasElement>[]) {
   function _update() {
     _frames++;
     const now = _now();
-    _charts[1].update(now - _start, 200);
+    _charts[1].update(now - _start, maxMs);
     if (now >= _time + 1000) {
-      _charts[0].update((_frames * 1000) / (now - _time), 100);
+      _charts[0].update((_frames * 1000) / (now - _time), maxFps);
       _time = now;
       _frames = 0;
       if (_charts.length === 3) {
-        _charts[2].update(_perf.memory!.usedJSHeapSize / 1048576, _perf.memory!.jsHeapSizeLimit / 1048576);
+        _charts[2].update(
+          _perf.memory!.usedJSHeapSize / 1048576,
+          Math.min(maxMb, _perf.memory!.jsHeapSizeLimit / 1048576),
+        );
       }
     }
     _start = now;
   }
 
   function _schedule() {
-    _frameId = raf(_onFrame);
+    _frameId = requestAnimationFrame(_onFrame);
   }
 
   function _interrupt() {
-    if (_frameId != null) raf.cancel(_frameId);
+    if (_frameId != null) cancelAnimationFrame(_frameId);
   }
 
   function _onFrame() {
