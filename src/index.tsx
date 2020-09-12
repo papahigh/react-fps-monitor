@@ -39,16 +39,6 @@ function Monitor({
 
   const display = state % nodes.current.length;
 
-  function render(ref: RefObject<HTMLCanvasElement>, index: number) {
-    return (
-      <canvas
-        ref={ref}
-        key={index}
-        style={{ height: HEIGHT, width: WIDTH, display: index === display ? 'block' : 'none' }}
-      />
-    );
-  }
-
   return (
     <div
       style={{
@@ -66,7 +56,13 @@ function Monitor({
         nextState();
       }}
     >
-      {nodes.current.map(render)}
+      {nodes.current.map((ref, index) => (
+        <canvas
+          ref={ref}
+          key={index}
+          style={{ height: HEIGHT, width: WIDTH, display: index === display ? 'block' : 'none' }}
+        />
+      ))}
     </div>
   );
 }
