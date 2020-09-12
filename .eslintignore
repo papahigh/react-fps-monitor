@@ -1,0 +1,9 @@
+build/
+lib/
+es/
+node_modules/
+.snapshots/
+
+*.d.ts
+*.min.js
+rollup.config.js
